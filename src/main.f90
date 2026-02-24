@@ -26,7 +26,7 @@ PROGRAM main
 
   call to_reduced_units(nmolecules, sigma_A, epsil_K, mass_gmol, dt_ps, tauT_ps, Tref_K, posA, velA, box_A, &
                         dt, tauT, Tref, pos, vel, L, uvel_Aps, utime_ps)
-
+  print*, Tref
   N = 3*nmolecules
   nmol = nmolecules
   atoms_per_mol = 3

@@ -5,8 +5,8 @@ set xlabel 'Time (r.u.)'
 set ylabel 'Temperature (r.u.)'
 
 unset key
-
-plot 'energies_T.dat' u 1:5 w lp t 'Temp'
+t_ref=1.8781302170283807
+plot 'energies_T.dat' u 1:5 w lp t 'Temp',  t_ref t 'T_ref'
 
 set output 'Energies.png'
 
