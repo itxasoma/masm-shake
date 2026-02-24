@@ -1,169 +1,87 @@
 PROGRAM main
   use GLOBAL
-  use crystal
-  use motion
   use force
+  use motion
+  use io_teacher
+  use rdf_module
   IMPLICIT NONE
 
-  integer :: step, nsteps
-  double precision :: dt, t
-  double precision, allocatable :: pos(:,:), vel(:,:)
-  double precision :: Upot, kin
-  character(len=8), allocatable :: names(:)
+  integer :: step, nsteps, nmolecules
+  integer :: nf
+  integer :: eq_steps, traj_stride, sample_stride
+  double precision :: dt_ps, tauT_ps, Tref_K, sigma_A, epsil_K, mass_gmol, r0_A
+  double precision :: dt, tauT, Tref
+  double precision :: box_A, uvel_Aps, utime_ps
+  double precision :: t
+  double precision, allocatable :: posA(:,:), velA(:,:)
+  double precision, allocatable :: pos(:,:),  vel(:,:)
+  double precision :: Upot, kin, Etot, temp, lambda
+  character(len=2), allocatable :: names(:)
 
-  ! 4. System parameters
-  L = 10.d0
-  cutoff = 2.5d0  ! < L/2
+  ! -------------------------
+  ! Read inputs/files
+  ! -------------------------
+  call read_input_dades('exercicishake.dades', nsteps, dt_ps, tauT_ps, nmolecules, Tref_K, sigma_A, epsil_K, mass_gmol, r0_A)
+  call read_conf_data('conf.data', nmolecules, posA, velA, box_A)
 
-  ! Initialize two particles
-  call two_particles(1.01d0, pos)
-  allocate(vel(N,3)); vel(:,:) = 0.d0
-  allocate(names(N)); names = 'A'
+  call to_reduced_units(nmolecules, sigma_A, epsil_K, mass_gmol, dt_ps, tauT_ps, Tref_K, posA, velA, box_A, &
+                        dt, tauT, Tref, pos, vel, L, uvel_Aps, utime_ps)
 
-! -------------------------------
-! Single run: Velocity-Verlet
-! -------------------------------
-  dt = 1.0d-3
-  nsteps = 10000
+  N = 3*nmolecules
+  nmol = nmolecules
+  atoms_per_mol = 3
+
+  cutoff = 2.5d0
+  rho = dble(N) / (L**3)
+
+  nf = 6*nmolecules - 3   
+
+  allocate(names(N))
+  names(:) = 'Ar'
+
+  ! Controls
+  traj_stride   = 10
+  eq_steps = max(0, min(200, nsteps/5))
+  sample_stride = 1
+
   t = 0.d0
 
-  open(unit=10, file='trajectory_velVerlet.xyz',         status='replace', action='write')
-  open(unit=20, file='energies_velVerlet.dat',           status='replace', action='write')
-  write(*,*) '--- Running Velocity-Verlet (single run) ---'
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(10, pos, names)
-     write(20,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_VelocityVerlet(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(20)
+  ! -------------------------
+  ! Outputs
+  ! -------------------------
+  open(unit=10, file='trajectory.xyz', status='replace', action='write')
+  open(unit=20, file='energies_T.dat', status='replace', action='write')
+  write(20,'(A)') '# t  Upot  K  Etot  T  lambda'
+
+  ! RDF
+  call rdf_init(200, L)
+
+  write(*,*) '--- Running NVT (Berendsen) Velocity-Verlet ---'
+  write(*,*) 'N=', N, ' L=', L, ' rho=', rho
+  write(*,*) 'dt=', dt, ' tauT=', tauT, ' Tref=', Tref, ' nsteps=', nsteps
+  write(*,*) 'Equil steps (no RDF sampling)=', eq_steps
+
+  do step = 1, nsteps
+
+    call time_step_VelocityVerlet_NVT(dt, cutoff, tauT, Tref, nf, pos, vel, Upot, kin, temp, lambda)
+    t = t + dt
+    Etot = Upot + kin
+
+    if (mod(step, traj_stride) == 0) call write_xyz(10, pos, names)
+    write(20,'(F12.6,5(1X,F20.10))') t, Upot, kin, Etot, temp, lambda
+
+    if (step > eq_steps) then
+      if (mod(step, sample_stride) == 0) call rdf_sample(pos)
+    end if
+
+  end do
+
   close(10)
+  close(20)
 
-! -------------------------------
-! Single run: Euler
-! -------------------------------
-  call two_particles(1.01d0, pos)
-  vel(:,:) = 0.d0
-  t = 0.d0
+  call rdf_write('gr_ArAr.dat', rho)
 
-  open(unit=30, file='trajectory_Euler.xyz',             status='replace', action='write')
-  open(unit=40, file='energies_euler.dat',               status='replace', action='write')
-  write(*,*) '--- Running Euler (single run) ---'
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(30, pos, names)
-     write(40,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_Euler_pbc(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(30)
-  close(40)
+  write(*,*) 'Done.'
+  write(*,*) 'Wrote: trajectory.xyz, energies_T.dat, gr_ArAr.dat'
 
-! -------------------------------
-! Hand-written dt sweep: Velocity-Verlet
-! -------------------------------
-  write(*,*) '--- Sweep dt: Velocity-Verlet ---'
-
-  ! dt = 1E-4
-  call two_particles(1.01d0, pos); vel(:,:) = 0.d0; t = 0.d0; dt = 1.0d-4
-  open(unit=41, file='energies_vV_dt_-1E-04.dat',        status='replace', action='write')
-  open(unit=45, file='trajectory_vV_dt_-1E-04.xyz',      status='replace', action='write')
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(45, pos, names)
-     write(41,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_VelocityVerlet(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(41); close(45)
-
-  ! dt = 1E-3
-  call two_particles(1.01d0, pos); vel(:,:) = 0.d0; t = 0.d0; dt = 1.0d-3
-  open(unit=42, file='energies_vV_dt_-1E-03.dat',        status='replace', action='write')
-  open(unit=46, file='trajectory_vV_dt_-1E-03.xyz',      status='replace', action='write')
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(46, pos, names)
-     write(42,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_VelocityVerlet(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(42); close(46)
-
-  ! dt = 1E-2
-  call two_particles(1.01d0, pos); vel(:,:) = 0.d0; t = 0.d0; dt = 1.0d-2
-  open(unit=43, file='energies_vV_dt_-1E-02.dat',        status='replace', action='write')
-  open(unit=47, file='trajectory_vV_dt_-1E-02.xyz',      status='replace', action='write')
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(47, pos, names)
-     write(43,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_VelocityVerlet(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(43); close(47)
-
-  ! dt = 1E-1
-  call two_particles(1.01d0, pos); vel(:,:) = 0.d0; t = 0.d0; dt = 1.0d-1
-  open(unit=44, file='energies_vV_dt_-1E-01.dat',        status='replace', action='write')
-  open(unit=48, file='trajectory_vV_dt_-1E-01.xyz',      status='replace', action='write')
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(48, pos, names)
-     write(44,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_VelocityVerlet(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(44); close(48)
-
-! -------------------------------
-! Hand-written dt sweep: Euler
-! -------------------------------
-  write(*,*) '--- Sweep dt: Euler ---'
-
-  ! dt = 1E-4
-  call two_particles(1.01d0, pos); vel(:,:) = 0.d0; t = 0.d0; dt = 1.0d-4
-  open(unit=51, file='energies_E_dt_-1E-04.dat',         status='replace', action='write')
-  open(unit=55, file='trajectory_E_dt_-1E-04.xyz',       status='replace', action='write')
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(55, pos, names)
-     write(51,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_Euler_pbc(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(51); close(55)
-
-  ! dt = 1E-3
-  call two_particles(1.01d0, pos); vel(:,:) = 0.d0; t = 0.d0; dt = 1.0d-3
-  open(unit=52, file='energies_E_dt_-1E-03.dat',         status='replace', action='write')
-  open(unit=56, file='trajectory_E_dt_-1E-03.xyz',       status='replace', action='write')
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(56, pos, names)
-     write(52,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_Euler_pbc(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(52); close(56)
-
-  ! dt = 1E-2
-  call two_particles(1.01d0, pos); vel(:,:) = 0.d0; t = 0.d0; dt = 1.0d-2
-  open(unit=53, file='energies_E_dt_-1E-02.dat',         status='replace', action='write')
-  open(unit=57, file='trajectory_E_dt_-1E-02.xyz',       status='replace', action='write')
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(57, pos, names)
-     write(53,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_Euler_pbc(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(53); close(57)
-
-  ! dt = 1E-1
-  call two_particles(1.01d0, pos); vel(:,:) = 0.d0; t = 0.d0; dt = 1.0d-1
-  open(unit=54, file='energies_E_dt_-1E-01.dat',         status='replace', action='write')
-  open(unit=58, file='trajectory_E_dt_-1E-01.xyz',       status='replace', action='write')
-  do step = 0, nsteps
-     if (mod(step,10) == 0) call write_xyz(58, pos, names)
-     write(54,'(F12.6,3(1X,F20.10))') t, Upot, kin, Upot+kin
-     call time_step_Euler_pbc(dt, cutoff, pos, vel, Upot, kin)
-     t = t + dt
-  enddo
-  close(54); close(58)
-
-
-   call system("gnuplot *.gnu")
 END PROGRAM
