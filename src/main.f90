@@ -40,7 +40,7 @@ PROGRAM main
   names(:) = 'Ar'
 
   ! Controls
-  traj_stride   = 10
+  traj_stride = 10
   eq_steps = max(0, min(200, nsteps/5))
   sample_stride = 1
 
@@ -72,9 +72,9 @@ PROGRAM main
 
     if (step > eq_steps) then
       if (mod(step, sample_stride) == 0) call rdf_sample(pos)
-    end if
-
-  end do
+    endif
+    
+  enddo
 
   close(10)
   close(20)
