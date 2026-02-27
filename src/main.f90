@@ -39,6 +39,11 @@ PROGRAM main
   allocate(names(N))
   names(:) = 'Ar'
 
+  ! Write initial configuration in XYZ format (for visualization)
+  open(unit=30, file='../out/ini-conf.xyz', status='replace', action='write')
+  call write_xyz(30, posA, names)
+  close(30)
+
   ! Controls
   traj_stride = 10
   eq_steps = max(0, min(200, nsteps/5))
@@ -61,6 +66,7 @@ PROGRAM main
   write(*,*) 'dt=', dt, ' tauT=', tauT, ' Tref=', Tref, ' nsteps=', nsteps
   write(*,*) 'Equil steps (no RDF sampling)=', eq_steps
 
+  ! Velocity Verlet integration loop, for fixed N,V,T (Berendsen thermostat)
   do step = 1, nsteps
 
     call time_step_VelocityVerlet_NVT(dt, cutoff, tauT, Tref, nf, pos, vel, Upot, kin, temp, lambda)

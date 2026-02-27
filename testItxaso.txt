@@ -1,1 +1,22 @@
-Hello World! Itxaso here
+Hello World! Itxaso here.
+How to visualize 3 atom molecules on VMD.
+    1-Open VMD, Extensions, Tk Console.
+    2-In console, paste this:
+
+        package require topotools
+        set m top
+        topo clearbonds
+
+        set n [molinfo $m get numatoms]
+        for {set i 0} {$i < $n} {incr i 3} {
+            set a $i
+            set b [expr {$i+1}]
+            set c [expr {$i+2}]
+            topo addbond $a $b
+            topo addbond $b $c
+            topo addbond $c $a
+        }
+
+        mol reanalyze $m
+
+    3-Visualize it using CPK.
