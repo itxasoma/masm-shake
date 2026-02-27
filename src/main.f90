@@ -21,8 +21,8 @@ PROGRAM main
   ! -------------------------
   ! Read inputs/files
   ! -------------------------
-  call read_input_dades('exercicishake.dades', nsteps, dt_ps, tauT_ps, nmolecules, Tref_K, sigma_A, epsil_K, mass_gmol, r0_A)
-  call read_conf_data('conf.data', nmolecules, posA, velA, box_A)
+  call read_input_dades('inputs/exercicishake.dades', nsteps, dt_ps, tauT_ps, nmolecules, Tref_K, sigma_A, epsil_K, mass_gmol, r0_A)
+  call read_conf_data('inputs/conf.data', nmolecules, posA, velA, box_A)
 
   call to_reduced_units(nmolecules, sigma_A, epsil_K, mass_gmol, dt_ps, tauT_ps, Tref_K, posA, velA, box_A, &
                         dt, tauT, Tref, pos, vel, L, uvel_Aps, utime_ps)
@@ -49,8 +49,8 @@ PROGRAM main
   ! -------------------------
   ! Outputs
   ! -------------------------
-  open(unit=10, file='trajectory.xyz', status='replace', action='write')
-  open(unit=20, file='energies_T.dat', status='replace', action='write')
+  open(unit=10, file='../out/trajectory.xyz', status='replace', action='write')
+  open(unit=20, file='../out/energies_T.dat', status='replace', action='write')
   write(20,'(A)') '# t  Upot  K  Etot  T  lambda'
 
   ! RDF
@@ -79,7 +79,7 @@ PROGRAM main
   close(10)
   close(20)
 
-  call rdf_write('gr_ArAr.dat', rho)
+  call rdf_write('../out/gr_ArAr.dat', rho)
 
   write(*,*) 'Done.'
   write(*,*) 'Wrote: trajectory.xyz, energies_T.dat, gr_ArAr.dat'
