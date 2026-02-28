@@ -34,7 +34,7 @@ PROGRAM main
   cutoff = 2.5d0
   rho = dble(N) / (L**3)
 
-  nf = 6*nmolecules - 3   
+  nf = 6*nmolecules - 3
 
   allocate(names(N))
   names(:) = 'Ar'
@@ -47,7 +47,7 @@ PROGRAM main
   ! Controls
   traj_stride = 10
   eq_steps = max(0, min(200, nsteps/5))
-  sample_stride = 1
+  !sample_stride = 1  
 
   t = 0.d0
 
@@ -58,7 +58,7 @@ PROGRAM main
   open(unit=20, file='../out/energies_T.dat', status='replace', action='write')
   write(20,'(A)') '# t  Upot  K  Etot  T  lambda'
 
-  ! RDF
+  ! RDF: initialize with max samples and max distance
   call rdf_init(200, L)
 
   write(*,*) '--- Running NVT (Berendsen) Velocity-Verlet ---'
@@ -66,28 +66,25 @@ PROGRAM main
   write(*,*) 'dt=', dt, ' tauT=', tauT, ' Tref=', Tref, ' nsteps=', nsteps
   write(*,*) 'Equil steps (no RDF sampling)=', eq_steps
 
-  ! Velocity Verlet integration loop, for fixed N,V,T (Berendsen thermostat)
   do step = 1, nsteps
-
     call time_step_VelocityVerlet_NVT(dt, cutoff, tauT, Tref, nf, pos, vel, Upot, kin, temp, lambda)
     t = t + dt
     Etot = Upot + kin
 
     if (mod(step, traj_stride) == 0) call write_xyz(10, pos, names)
     write(20,'(F12.6,5(1X,F20.10))') t, Upot, kin, Etot, temp, lambda
-
-    if (step > eq_steps) then
-      if (mod(step, sample_stride) == 0) call rdf_sample(pos)
-    endif
-    
   enddo
 
   close(10)
   close(20)
 
-  call rdf_write('../out/gr_ArAr.dat', rho)
+  ! g(r) only last config
+  call rdf_reset()
+  call rdf_sample(pos)
+  call rdf_write('../out/gr_ArAr.dat')
 
   write(*,*) 'Done.'
   write(*,*) 'Wrote: trajectory.xyz, energies_T.dat, gr_ArAr.dat'
 
-END PROGRAM
+END PROGRAM main
+

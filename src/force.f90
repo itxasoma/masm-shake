@@ -4,8 +4,9 @@ MODULE force
 contains
 
   SUBROUTINE pbc(rij, L)
-    double precision, intent(in):: L
-    double precision, intent(out):: rij(3)
+    IMPLICIT NONE
+    double precision, intent(in)    :: L
+    double precision, intent(inout) :: rij(3)
     integer:: i
     do i = 1, 3
       if (rij(i) .ge. (L/2.d0)) then
@@ -40,7 +41,7 @@ contains
     do i = 1, N
       do j = i+1, N
 
-        ! Skip intramolecular interactions (as asked by the teacher)
+        ! Skip intramolecular interactions
         if (atoms_per_mol > 0) then
           mol_i = (i-1)/atoms_per_mol
           mol_j = (j-1)/atoms_per_mol
