@@ -10,7 +10,7 @@ PROGRAM main
   integer :: nf
   integer :: eq_steps, traj_stride, sample_stride
   double precision :: dt_ps, tauT_ps, Tref_K, sigma_A, epsil_K, mass_gmol, r0_A
-  double precision :: dt, tauT, Tref
+  double precision :: dt, tauT, Tref, d 
   double precision :: box_A, uvel_Aps, utime_ps
   double precision :: t
   double precision, allocatable :: posA(:,:), velA(:,:)
@@ -35,6 +35,8 @@ PROGRAM main
   rho = dble(N) / (L**3)
 
   nf = 6*nmolecules - 3
+
+  d = r0_A/sigma_A
 
   allocate(names(N))
   names(:) = 'Ar'
@@ -67,7 +69,7 @@ PROGRAM main
   write(*,*) 'Equil steps (no RDF sampling)=', eq_steps
 
   do step = 1, nsteps
-    call time_step_VelocityVerlet_NVT(dt, cutoff, tauT, Tref, nf, pos, vel, Upot, kin, temp, lambda)
+    call time_step_VelocityVerlet_NVT_shake(dt, cutoff, tauT, Tref, nf, d, pos, vel, Upot, kin, temp, lambda)
     t = t + dt
     Etot = Upot + kin
 
