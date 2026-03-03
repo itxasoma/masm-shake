@@ -93,4 +93,83 @@ contains
     enddo
   END SUBROUTINE
 
+! HERE, WE ADD SHAKE: CONSTRAINTS ON BONDS
+! ---------------------------------------------------------------
+! SHAKE: corregeix posicions provisionals per mantenir el triangle
+! equilàter de cada molècula (r_ij = d per als 3 parells).
+!
+! pos_old : posicions a temps t (no es modifiquen)
+! pos_pro : posicions provisionals t+dt (es corregeixen in-place)
+! dt : pas de temps (u.r.)
+! d : costat del triangle (u.r.)
+!
+! Referència: Ryckaert, Ciccotti & Berendsen, J.Comput.Phys 23, 327 (1977)
+! ---------------------------------------------------------------
+SUBROUTINE shake(pos_old, pos_pro, dt, d)
+  IMPLICIT NONE
+  double precision, intent(in):: pos_old(:,:)
+  double precision, intent(inout):: pos_pro(:,:)
+  double precision, intent(in):: dt, d
+  integer, parameter:: max_iter = 1000
+  double precision, parameter:: tol = 1.d-8
+  integer:: ic, k, iter
+  integer:: a, b
+  integer:: i1, i2, i3
+  integer:: pairs(3,2)
+  double precision:: r_ab(3), rp_ab(3)
+  double precision:: rp2, dot_rp_r, mu, dsq
+  logical:: converged
+  
+  dsq = d * d
+
+    do ic = 1, nmol
+      ! Índexos dels 3 àtoms de la molècula
+      i1 = (ic-1)*atoms_per_mol + 1
+      i2 = (ic-1)*atoms_per_mol + 2
+      i3 = (ic-1)*atoms_per_mol + 3
+
+      ! Els 3 parells del triangle
+      pairs(1,1) = i1 ; pairs(1,2) = i2 ! parell 1-2
+      pairs(2,1) = i1 ; pairs(2,2) = i3 ! parell 1-3
+      pairs(3,1) = i2 ; pairs(3,2) = i3 ! parell 2-3
+    
+      do iter = 1, max_iter
+        converged = .true.
+        do k = 1, 3
+          a = pairs(k,1)
+          b = pairs(k,2)
+          ! Vector provisional r_pij(t+dt) = r_pb - r_pa 
+          rp_ab(:) = pos_pro(b,:) - pos_pro(a,:)
+          call pbc(rp_ab, L)
+          rp2 = rp_ab(1)**2 + rp_ab(2)**2 + rp_ab(3)**2
+
+          if (abs(rp2 - dsq) > tol) then
+            converged = .false.
+
+            ! Vector antic r_ij(t) = r_b(t) - r_a(t) (mínim imatge, fix durant iter)
+            r_ab(:) = pos_old(b,:) - pos_old(a,:)
+            call pbc(r_ab, L)
+            dot_rp_r = rp_ab(1)*r_ab(1) + rp_ab(2)*r_ab(2) + rp_ab(3)*r_ab(3)
+
+            ! Multiplicador de Lagrange (m=1 en u.r., 1/ma+1/mb = 2)
+            ! mu = (rp_ij^2 - d^2)/(4*(1/ma+1/mb)*dt^2 * rp_ij·r_ij(t))
+            mu = (rp2 - dsq)/(4.d0 * 2.d0 * dt*dt * dot_rp_r)
+
+            ! Correcció de posicions:
+            ! r_a = r_pa + 2*mu*dt^2/ma * r_ab(t)
+            ! r_b = r_pb - 2*mu*dt^2/mb * r_ab(t)
+            pos_pro(a,:) = pos_pro(a,:) + 2.d0 * mu * dt*dt * r_ab(:)
+            pos_pro(b,:) = pos_pro(b,:) - 2.d0 * mu * dt*dt * r_ab(:)
+          endif
+
+        enddo ! k (parells)
+        if (converged) exit
+      enddo ! iter
+      if (.not. converged) &
+      write(*,'(A,I6,A)') 'WARNING: SHAKE did not converge for molecule ', ic, '!'
+    enddo ! ic (molècules)
+END SUBROUTINE shake
+
+
+
 END MODULE

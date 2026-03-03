@@ -42,7 +42,7 @@ contains
     ngr = ngr + 1
     rmax = L/2.d0
 
-    do ic = 1, nmol-1
+    do ic = 1, 3*nmol-1
       do is = 1, atoms_per_mol
         i = (ic-1)*atoms_per_mol + is
 
@@ -72,7 +72,6 @@ contains
   SUBROUTINE rdf_write(filename)
     IMPLICIT NONE
     character(len=*), intent(in):: filename
-
     integer:: u, i
     double precision:: pi, vol, rho_inter, total_atoms
     double precision:: r_bin, del_r, vol_shell, ideal_count, g_val
@@ -105,7 +104,7 @@ contains
         end if
 
         write(u,'(2(1X,F20.10))') r_bin, g_val
-      end do
+      enddo
     close(u)
   END SUBROUTINE rdf_write
 
