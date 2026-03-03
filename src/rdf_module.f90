@@ -12,8 +12,8 @@ contains
 
   SUBROUTINE rdf_init(nhis_in, box)
     IMPLICIT NONE
-    integer, intent(in) :: nhis_in
-    double precision, intent(in) :: box
+    integer, intent(in):: nhis_in
+    double precision, intent(in):: box
 
     nhis = nhis_in
     delg = (box/2.d0) / dble(nhis)
@@ -33,12 +33,11 @@ contains
 
   SUBROUTINE rdf_sample(pos)
     IMPLICIT NONE
-    double precision, intent(in) :: pos(:,:)
-
-    integer :: ic, is, jc, js
-    integer :: i, j, ibin
-    double precision :: rij(3), rr2, dist
-    double precision :: rmax
+    double precision, intent(in):: pos(:,:)
+    integer:: ic, is, jc, js
+    integer:: i, j, ibin
+    double precision:: rij(3), rr2, dist
+    double precision:: rmax
 
     ngr = ngr + 1
     rmax = L/2.d0
@@ -62,21 +61,21 @@ contains
               if (ibin <= nhis) hist(ibin) = hist(ibin) + 2.d0
             end if
 
-          end do
-        end do
-      end do
-    end do
+          enddo
+        enddo
+      enddo
+    enddo
 
   END SUBROUTINE rdf_sample
 
 
   SUBROUTINE rdf_write(filename)
     IMPLICIT NONE
-    character(len=*), intent(in) :: filename
+    character(len=*), intent(in):: filename
 
-    integer :: u, i
-    double precision :: pi, vol, rho_inter, total_atoms
-    double precision :: r_bin, del_r, vol_shell, ideal_count, g_val
+    integer:: u, i
+    double precision:: pi, vol, rho_inter, total_atoms
+    double precision:: r_bin, del_r, vol_shell, ideal_count, g_val
 
     pi = 4.d0*atan(1.d0)
 
