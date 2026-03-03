@@ -63,7 +63,7 @@ PROGRAM main
   ! RDF: initialize with max samples and max distance
   call rdf_init(200, L)
 
-  write(*,*) '--- Running NVT (Berendsen) Velocity-Verlet ---'
+  write(*,*) '--- Running NVT (Berendsen) Velocity-Verlet WITH SHAKE ---'
   write(*,*) 'N=', N, ' L=', L, ' rho=', rho
   write(*,*) 'dt=', dt, ' tauT=', tauT, ' Tref=', Tref, ' nsteps=', nsteps
   write(*,*) 'Equil steps (no RDF sampling)=', eq_steps
