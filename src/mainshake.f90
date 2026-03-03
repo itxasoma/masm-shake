@@ -69,7 +69,7 @@ PROGRAM main
   write(*,*) 'Equil steps (no RDF sampling)=', eq_steps
 
   do step = 1, nsteps
-    call time_step_VelocityVerlet_NVT(dt, cutoff, tauT, Tref, nf, pos, vel, Upot, kin, temp, lambda)
+    call time_step_VelocityVerlet_NVT_shake(dt, cutoff, tauT, Tref, nf, d, pos, vel, Upot, kin, temp, lambda)
     t = t + dt
     Etot = Upot + kin
 
