@@ -1,7 +1,7 @@
 FC = gfortran
 FFLAGS = -O2 -g -Wall -Wextra -fcheck=all -fbacktrace
 
-TARGET = mdinamics
+TARGET      = mdinamics
 TARGETshake = mdinamics_shake
 
 all: $(TARGET) $(TARGETshake)
@@ -9,7 +9,7 @@ all: $(TARGET) $(TARGETshake)
 $(TARGET): parameters.o force.o motion.o io_teacher.o rdf_module.o main.o
 	$(FC) $(FFLAGS) -o $@ $^
 
-$(TARGETshake): parameters.o force.o motion.o io_teacher.o rdf_module.o main.o
+$(TARGETshake): parameters.o force.o motion.o io_teacher.o rdf_module.o mainshake.o
 	$(FC) $(FFLAGS) -o $@ $^
 
 parameters.o: parameters.f90
@@ -41,4 +41,5 @@ runshake: $(TARGETshake)
 
 clean:
 	rm -f *.o *.mod $(TARGET) $(TARGETshake)
+
 
