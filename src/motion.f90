@@ -55,11 +55,11 @@ contains
 
   SUBROUTINE time_step_VelocityVerlet_NVT(dt, cutoff, tauT, Tref, nf, pos, vel, Upot, kin, temp, lambda)
     IMPLICIT NONE
-    double precision, intent(in)    :: dt, cutoff, tauT, Tref
-    integer, intent(in)             :: nf
-    double precision, intent(inout) :: pos(:,:), vel(:,:)
-    double precision, intent(out)   :: Upot, kin, temp, lambda
-    double precision, allocatable   :: F(:,:), Fnew(:,:)
+    double precision, intent(in):: dt, cutoff, tauT, Tref
+    integer, intent(in):: nf
+    double precision, intent(inout):: pos(:,:), vel(:,:)
+    double precision, intent(out):: Upot, kin, temp, lambda
+    double precision, allocatable:: F(:,:), Fnew(:,:)
 
     call find_force_lj(cutoff, pos, Upot, F)
 
@@ -170,6 +170,50 @@ SUBROUTINE shake(pos_old, pos_pro, dt, d)
     enddo ! ic (molècules)
 END SUBROUTINE shake
 
+
+! ---------------------------------------------------------------
+! Velocity-Verlet NVT with Berendsen + SHAKE
+! If d <= 0.d0, no SHAKE (d=0 means no constraint))
+! ---------------------------------------------------------------
+SUBROUTINE time_step_VelocityVerlet_NVT_shake(dt, cutoff, tauT, Tref, nf, d, pos, vel, Upot, kin, temp, lambda)
+IMPLICIT NONE
+double precision, intent(in):: dt, cutoff, tauT, Tref, d
+integer, intent(in):: nf
+double precision, intent(inout):: pos(:,:), vel(:,:)
+double precision, intent(out):: Upot, kin, temp, lambda
+double precision, allocatable:: F(:,:), Fnew(:,:)
+double precision, allocatable:: pos_old(:,:)
+
+  ! Save positions at time t (SHAKE)
+  allocate(pos_old(N,3))
+  pos_old(:,:) = pos(:,:)
+  
+  call find_force_lj(cutoff, pos, Upot, F)
+  ! Half time step: v(t+dt/2) = v(t) + F(t)*dt/2
+  vel(:,:) = vel(:,:) + 0.5d0*F(:,:)*dt
+
+  ! Provisional positions: r_pro = r(t) + v(t+dt/2)*dt
+  pos(:,:) = pos(:,:) + vel(:,:)*dt
+  call apply_pbc_all(pos)
+
+  ! SHKE: correct positions
+  if (d > 0.d0) call shake(pos_old, pos, dt, d)
+
+  ! New forces with corrected positions
+  call find_force_lj(cutoff, pos, Upot, Fnew)
+
+  ! Second half step: v(t+dt) = v(t+dt/2) + F(t+dt)*dt/2
+  vel(:,:) = vel(:,:) + 0.5d0*Fnew(:,:)*dt
+
+  ! Berendsen 
+  call apply_berendsen(dt, tauT, Tref, nf, vel, lambda)
+  call kinetic_energy(vel, kin)
+  call temperature_from_kin(kin, nf, temp)
+  
+  if (allocated(F)) deallocate(F)
+  if (allocated(Fnew)) deallocate(Fnew)
+  if (allocated(pos_old)) deallocate(pos_old)
+END SUBROUTINE time_step_VelocityVerlet_NVT_shake
 
 
 END MODULE
