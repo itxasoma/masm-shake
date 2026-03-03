@@ -56,8 +56,8 @@ PROGRAM main
   ! -------------------------
   ! Outputs
   ! -------------------------
-  open(unit=10, file='../out/trajectory.xyz', status='replace', action='write')
-  open(unit=20, file='../out/energies_T.dat', status='replace', action='write')
+  open(unit=10, file='../out/trajectory_shake.xyz', status='replace', action='write')
+  open(unit=20, file='../out/energies_T_shake.dat', status='replace', action='write')
   write(20,'(A)') '# t  Upot  K  Etot  T  lambda'
 
   ! RDF: initialize with max samples and max distance
@@ -83,10 +83,10 @@ PROGRAM main
   ! g(r) only last config
   call rdf_reset()
   call rdf_sample(pos)
-  call rdf_write('../out/gr_ArAr.dat')
+  call rdf_write('../out/gr_ArAr_shake.dat')
 
   write(*,*) 'Done.'
-  write(*,*) 'Wrote: trajectory.xyz, energies_T.dat, gr_ArAr.dat'
+  write(*,*) 'Wrote: trajectory_shake.xyz, energies_T_shake.dat, gr_ArAr_shake.dat'
 
 END PROGRAM main
 
