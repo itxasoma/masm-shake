@@ -9,6 +9,9 @@ all: $(TARGET) $(TARGETshake)
 $(TARGET): parameters.o force.o motion.o io_teacher.o rdf_module.o main.o
 	$(FC) $(FFLAGS) -o $@ $^
 
+$(TARGETshake): parameters.o force.o motion.o io_teacher.o rdf_module.o main.o
+	$(FC) $(FFLAGS) -o $@ $^
+
 parameters.o: parameters.f90
 	$(FC) $(FFLAGS) -c $<
 
