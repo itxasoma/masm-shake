@@ -1,4 +1,4 @@
-PROGRAM main
+PROGRAM mainshake
   use GLOBAL
   use force
   use motion
@@ -88,5 +88,5 @@ PROGRAM main
   write(*,*) 'Done.'
   write(*,*) 'Wrote: trajectory_shake.xyz, energies_T_shake.dat, gr_ArAr_shake.dat'
 
-END PROGRAM main
+END PROGRAM mainshake
 
