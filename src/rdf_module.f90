@@ -38,35 +38,55 @@ contains
     integer:: i, j, ibin
     double precision:: rij(3), rr2, dist
     double precision:: rmax
-
     ngr = ngr + 1
     rmax = L/2.d0
-
-    do ic = 1, 3*nmol-1
+    ! 
+    !──
+    ! Intermolecular pairs (jc > ic) 
+    !──────────────────────────────
+    do ic = 1, nmol-1
+    ! ← CORREGIT: nmol-1
       do is = 1, atoms_per_mol
         i = (ic-1)*atoms_per_mol + is
-
         do jc = ic+1, nmol
           do js = 1, atoms_per_mol
             j = (jc-1)*atoms_per_mol + js
-
             rij(:) = pos(j,:) - pos(i,:)
             call pbc(rij, L)
-
-            rr2 = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
+            rr2 = rij(1)**2 + rij(2)**2 + rij(3)**2
             dist = sqrt(rr2)
-
-            if (dist .lt. rmax) then
+            if (dist < rmax) then
               ibin = int(dist/delg) + 1
-              if (ibin <= nhis) hist(ibin) = hist(ibin) + 2.d0
+            if (ibin <= nhis) hist(ibin) = hist(ibin) + 2.d0
             end if
-
           enddo
         enddo
       enddo
     enddo
-
-  END SUBROUTINE rdf_sample
+    ! 
+    !──
+    ! Intramolecular pairs (l < m, same molecule) 
+    !─────────────────
+    ! Necessari per veure el pic a r0 en el cas amb SHAKE
+    do ic = 1, nmol
+      do is = 1, atoms_per_mol-1
+      ! l
+      i = (ic-1)*atoms_per_mol + is
+      do js = is+1, atoms_per_mol    
+        ! m > l
+        j = (ic-1)*atoms_per_mol + js
+        rij(:) = pos(j,:) - pos(i,:)
+        call pbc(rij, L)
+        rr2 = rij(1)**2 + rij(2)**2 + rij(3)**2
+        dist = sqrt(rr2)
+        if (dist < rmax) then
+          ibin = int(dist/delg) + 1
+        if (ibin <= nhis) hist(ibin) = hist(ibin) + 2.d0
+        end if
+        enddo
+      enddo
+    enddo
+    END SUBROUTINE rdf_sample
 
 
   SUBROUTINE rdf_write(filename)
