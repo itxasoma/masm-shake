@@ -53,6 +53,36 @@ contains
     enddo
   END SUBROUTINE
 
+  ! Apply PBC to the centre of mass of each molecule, keeping
+  ! internal geometry intact.  This prevents molecules from being
+  ! split across the box boundary after SHAKE.
+  SUBROUTINE apply_pbc_mol(pos)
+    IMPLICIT NONE
+    double precision, intent(inout):: pos(:,:)
+    integer :: ic, i1, i3, j
+    double precision :: com(3), shift(3)
+
+    do ic = 1, nmol
+      i1 = (ic-1)*atoms_per_mol + 1
+      i3 =  ic   *atoms_per_mol
+
+      ! Centre of mass of this molecule (all atoms same mass)
+      com(:) = 0.d0
+      do j = i1, i3
+        com(:) = com(:) + pos(j,:)
+      enddo
+      com(:) = com(:) / dble(atoms_per_mol)
+
+      ! Shift needed to wrap the CoM into [0, L)
+      shift(:) = modulo(com(:), L) - com(:)
+
+      ! Apply the same shift to every atom of the molecule
+      do j = i1, i3
+        pos(j,:) = pos(j,:) + shift(:)
+      enddo
+    enddo
+  END SUBROUTINE apply_pbc_mol
+
   SUBROUTINE time_step_VelocityVerlet_NVT(dt, cutoff, tauT, Tref, nf, pos, vel, Upot, kin, temp, lambda)
     IMPLICIT NONE
     double precision, intent(in):: dt, cutoff, tauT, Tref
@@ -194,11 +224,14 @@ double precision, allocatable:: pos_old(:,:)
 
   ! Provisional positions: r_pro = r(t) + v(t+dt/2)*dt
   pos(:,:) = pos(:,:) + vel(:,:)*dt
-  call apply_pbc_all(pos)
 
   ! SHKE: correct positions
   if (d > 0.d0) call shake(pos_old, pos, dt, d)
-
+  
+  ! Wrap molecules as a whole (CoM PBC) so no bond is ever split
+  ! across the box boundary.  apply_pbc_all must NOT be used here
+  ! because it wraps each atom independently, breaking the rigid geometry.
+  call apply_pbc_mol(pos)
   ! New forces with corrected positions
   call find_force_lj(cutoff, pos, Upot, Fnew)
 
