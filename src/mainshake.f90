@@ -82,7 +82,7 @@ PROGRAM mainshake
 
   ! g(r) only last config
   call rdf_reset()
-  call rdf_sample(pos)
+  call rdf_sample(pos, include_intra=.true.)
   call rdf_write('../out/gr_ArAr_shake.dat')
 
   write(*,*) 'Done.'
