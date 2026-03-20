@@ -34,7 +34,7 @@ PROGRAM mainshake
   cutoff = 2.5d0
   rho = dble(N) / (L**3)
 
-  nf = 9*nmolecules - 3  ! Now, we have 3 constraints (fixed bond lengths) for each molecule,
+  nf = 6*nmolecules - 3  ! Now, we have 3 constraints (fixed bond lengths) for each molecule,
                          ! but we remove 3 DOF for the center of mass motion
 
   d = r0_A/sigma_A

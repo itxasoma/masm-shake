@@ -34,7 +34,7 @@ PROGRAM main
   cutoff = 2.5d0
   rho = dble(N) / (L**3)
 
-  nf = 6*nmolecules - 3
+  nf = 9*nmolecules - 3
 
   d = r0_A/sigma_A
 
